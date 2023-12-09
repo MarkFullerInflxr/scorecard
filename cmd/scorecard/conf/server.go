@@ -3,12 +3,14 @@ package conf
 import (
 	"github.com/gin-gonic/gin"
 	"influxer/scorecard/cmd/scorecard/middlewares"
+	"influxer/scorecard/pkg/files"
 	"influxer/scorecard/pkg/spreadsheet"
 )
 
 type Server struct {
 	Engine      *gin.Engine
 	Spreadsheet spreadsheet.Spreadsheet
+	Favicon     files.Favicon
 }
 
 func NewServer() (*Server, func() error) {

@@ -1,6 +1,7 @@
 package spreadsheet
 
 import (
+	"fmt"
 	"github.com/gorilla/websocket"
 	"strconv"
 	"strings"
@@ -11,8 +12,78 @@ import (
 type Scorecard struct {
 	tmpl map[string]*template.Template
 	data map[string]*Table
-	comm *websocket.Conn
+	conn map[string][]*websocket.Conn
 }
+
+func (s *Scorecard) handleEvent(meta map[string]interface{}, conn *websocket.Conn) {
+	headersInterface, ok := meta["HEADERS"].(map[string]interface{})
+	if !ok {
+		fmt.Println("malformed headers")
+		return
+	}
+
+	currentUrlI := headersInterface["HX-Current-URL"].(string)
+
+	tableName := getTableName(currentUrlI)
+
+	for k, v := range meta { //c0-1,d
+		if k != "HEADERS" {
+			event := parseWhatToken(k)
+
+			if event.event == "bodyCellValue" {
+				s.data[tableName].changeCellVal(event.locators[0], event.locators[1], v.(string))
+				s.notifyCells(tableName, event.locators[0], event.locators[1], conn)
+			}
+			if event.event == "headerCellValue" {
+				s.data[tableName].changeHeaderVal(event.locators[0], v.(string))
+				s.notifyHeaderCell(tableName, event.locators[0])
+			}
+			if event.event == "addRow" {
+				s.data[tableName].addRowAt(event.locators[0])
+				s.notifyTable(tableName)
+			}
+
+		}
+	}
+}
+
+func (s *Scorecard) notifyCells(tableName string, row int, col int, self *websocket.Conn) {
+	for _, conn := range s.conn[tableName] {
+		if conn == self {
+			continue // dont echo messages to yourself, that way we can keep focus on the <input>
+		}
+		conn.WriteMessage(websocket.TextMessage, s.BuildCell(tableName, row, col))
+	}
+}
+
+func (s *Scorecard) notifyHeaderCell(tableName string, col int) {
+	for _, conn := range s.conn[tableName] {
+		conn.WriteMessage(websocket.TextMessage, s.BuildHeaderCell(tableName, col))
+	}
+}
+
+func (s *Scorecard) notifyTable(tableName string) {
+	returnTable := s.BuildTable(tableName)
+	for _, conn := range s.conn[tableName] {
+		err := conn.WriteMessage(websocket.TextMessage, returnTable)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+}
+
+func getTableName(s string) string {
+	lastIndex := strings.LastIndex(s, "/")
+
+	if lastIndex != -1 {
+		substringAfterLastSlash := s[lastIndex+1:]
+		return substringAfterLastSlash
+	} else {
+		fmt.Println("Failed to parse headers")
+		return ""
+	}
+}
+
 type Table struct {
 	mut       sync.Mutex
 	TableName string
@@ -101,6 +172,8 @@ func NewScorecard() *Scorecard {
 	s.data = make(map[string]*Table)
 	s.data["Table_1"] = NewTable("Table_1")
 
+	s.conn = make(map[string][]*websocket.Conn)
+
 	return &s
 }
 
@@ -123,6 +196,38 @@ func (s *Table) addRowBottom() {
 	defer s.mut.Unlock()
 
 	s.Matrix = append(s.Matrix, make([]CellData, len(s.Matrix[0])))
+}
+
+// add a row between two indices
+// if its negative count back from the end
+// it its positive just shift
+func (s *Table) addRowAt(i int) {
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	if i > 0 {
+		newRow := make([]CellData, len(s.Matrix[0]))
+		s.Matrix = append(s.Matrix[:i+1], nil)
+		copy(s.Matrix[i+1:], s.Matrix[i:])
+		s.Matrix[i] = newRow
+	} else {
+		/*
+			-3|0: [],
+			-2|1: []
+			-1|2: nil
+		*/
+		width := len(s.Matrix[0]) //1
+		height := len(s.Matrix)
+		newRow := make([]CellData, width)
+
+		bottomEnd := [][]CellData{}
+		copy(bottomEnd, s.Matrix[height+i:])
+
+		s.Matrix = append(s.Matrix[:height+i+1], nil) // s[0:2] -> only the first row
+		height = len(s.Matrix)                        //3
+		copy(s.Matrix[height+i+1:], bottomEnd)        //s[1:] , s[2-1-1:]
+		s.Matrix[height+i] = newRow
+	}
 }
 
 type TableUpdateEvent struct {
@@ -151,6 +256,10 @@ func parseWhatToken(s string) TableUpdateEvent {
 			event:    "bodyCellValue",
 			locators: []int{ilocx, ilocy},
 		}
+	}
+
+	if strings.HasPrefix(s, "ar") { //
+		return TableUpdateEvent{event: "addRow", locators: []int{-1}}
 	}
 	return TableUpdateEvent{}
 }

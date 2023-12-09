@@ -4,10 +4,8 @@
         type="text"
         id="h{{.ColIndex}}"
         name="h{{.ColIndex}}"
-        hx-post="/fs/update/{{$.TableName}}"
-        hx-target="#h{{.ColIndex}}"
-        hx-trigger="input"
+        ws-send
+        hx-trigger="input delay:500ms"
         value="{{.CellVal}}"
-        hx-headers='{"Content-Type": "text-plain"}'
 >
 {{end}}

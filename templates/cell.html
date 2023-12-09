@@ -4,11 +4,8 @@
         type="text"
         id="c{{.RowIndex}}-{{.ColIndex}}"
         name="c{{.RowIndex}}-{{.ColIndex}}"
-        hx-post="/fs/update/{{$.TableName}}"
-        hx-target="#c{{.RowIndex}}-{{.ColIndex}}"
+        ws-send
         hx-trigger="input delay:500ms"
-        hx-swap="outerHTML"
         value="{{.CellVal}}"
-        hx-headers='{"Content-Type": "text-plain"}'
 >
 {{end}}

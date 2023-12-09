@@ -18,22 +18,10 @@ func (s *Scorecard) GetSheet() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tableName := c.Param("tableName")
 
-		table := s.data[tableName]
-
-		if table == nil {
-			s.data[tableName] = NewTable(tableName)
-			table = s.data[tableName]
-		}
-
-		var tplBuffer bytes.Buffer
-		err := s.tmpl["index.html"].ExecuteTemplate(&tplBuffer, "index", table)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		page := s.BuildIndex(tableName)
 
 		c.Header("Content-Type", "text/html")
-		write, err := c.Writer.Write(tplBuffer.Bytes())
+		write, err := c.Writer.Write(page)
 		if err != nil || write < 1 {
 			fmt.Println("Failed to write template")
 			return
