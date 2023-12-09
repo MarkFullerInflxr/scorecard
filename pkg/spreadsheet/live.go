@@ -23,14 +23,35 @@ func (s *Scorecard) HandleLiveComm() gin.HandlerFunc {
 			fmt.Println(err)
 			return
 		}
-		s.conn[tableName] = append(s.conn[tableName], conn)
-		returnTable := s.BuildTable(tableName)
-		err = conn.WriteMessage(websocket.TextMessage, returnTable)
+		if len(tableName) > 0 {
+			s.tableConn[tableName] = append(s.tableConn[tableName], conn)
+			returnTable := s.BuildTable(tableName)
+			err = conn.WriteMessage(websocket.TextMessage, returnTable)
+			if err != nil {
+				return
+			}
+
+			go s.iDidntKnowYouKnewHowToRead(conn)
+		} else {
+			s.homeConn = append(s.homeConn, conn)
+			returnTables := s.BuildListIndex()
+			err = conn.WriteMessage(websocket.TextMessage, returnTables)
+			if err != nil {
+				return
+			}
+
+			go s.itsLivioSAW(conn)
+		}
+	}
+}
+func (s *Scorecard) itsLivioSAW(conn *websocket.Conn) {
+	for {
+		messageType, buf, err := conn.ReadMessage()
 		if err != nil {
+			fmt.Println(err)
 			return
 		}
-
-		go s.iDidntKnowYouKnewHowToRead(conn)
+		fmt.Println(messageType, buf)
 	}
 }
 

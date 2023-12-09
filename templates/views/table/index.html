@@ -1,4 +1,4 @@
-{{define "index"}}
+{{define "table/index"}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,8 +21,14 @@
 </head>
 <body>
 <p>{{ .TableName }}</p>
-<div id="table-websocket" name="table-websocket" hx-ext="ws" ws-connect="/fs/live/{{.TableName}}">
-    <div id="table-{{.TableName}}" name="table-{{.TableName}}">None</div>
+<div id="table-websocket"
+     name="table-websocket"
+     hx-ext="ws"
+     ws-connect="/fs/live/{{.TableName}}">
+
+    <div id="table-{{.TableName}}"
+         name="table-{{.TableName}}">None
+    </div>
     <button style="width: 100%"
             hx-swap="outerHTML"
             hx-target="#table-{{.TableName}}"

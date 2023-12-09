@@ -10,9 +10,10 @@ import (
 )
 
 type Scorecard struct {
-	tmpl map[string]*template.Template
-	data map[string]*Table
-	conn map[string][]*websocket.Conn
+	tmpl      map[string]*template.Template
+	data      map[string]*Table
+	tableConn map[string][]*websocket.Conn
+	homeConn  []*websocket.Conn
 }
 
 func (s *Scorecard) handleEvent(meta map[string]interface{}, conn *websocket.Conn) {
@@ -48,7 +49,7 @@ func (s *Scorecard) handleEvent(meta map[string]interface{}, conn *websocket.Con
 }
 
 func (s *Scorecard) notifyCells(tableName string, row int, col int, self *websocket.Conn) {
-	for _, conn := range s.conn[tableName] {
+	for _, conn := range s.tableConn[tableName] {
 		if conn == self {
 			continue // dont echo messages to yourself, that way we can keep focus on the <input>
 		}
@@ -57,15 +58,25 @@ func (s *Scorecard) notifyCells(tableName string, row int, col int, self *websoc
 }
 
 func (s *Scorecard) notifyHeaderCell(tableName string, col int) {
-	for _, conn := range s.conn[tableName] {
+	for _, conn := range s.tableConn[tableName] {
 		conn.WriteMessage(websocket.TextMessage, s.BuildHeaderCell(tableName, col))
 	}
 }
 
 func (s *Scorecard) notifyTable(tableName string) {
 	returnTable := s.BuildTable(tableName)
-	for _, conn := range s.conn[tableName] {
+	for _, conn := range s.tableConn[tableName] {
 		err := conn.WriteMessage(websocket.TextMessage, returnTable)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+}
+
+func (s *Scorecard) notifyList() {
+	returnList := s.BuildTableList()
+	for _, conn := range s.homeConn {
+		err := conn.WriteMessage(websocket.TextMessage, returnList)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -143,36 +154,40 @@ func CreateHeaderData(colIndex int, tableName string, headerVal HeaderData) Head
 	return cd
 }
 
+func parseTemplateFiles(names ...string) (*template.Template, error) {
+	return template.ParseFiles(names...)
+}
+
 func NewScorecard() *Scorecard {
 	tmpl := make(map[string]*template.Template)
 
 	fm := template.FuncMap{"CreateCellData": CreateCellData, "CreateHeaderData": CreateHeaderData}
 
-	indexTemp := template.New("index")
-	indexTemp.Funcs(fm)
-	indexFiles, err := indexTemp.ParseFiles("./templates/table.html", "./templates/cell.html", "./templates/headercell.html", "./templates/index.html")
-	if err != nil {
-		return nil
+	parseTemplates := func(templateName string, files ...string) {
+		t := template.New(templateName)
+		t.Funcs(fm)
+		tmpl[templateName] = t
+		parsedFiles, err := tmpl[templateName].ParseFiles(files...)
+		if err != nil {
+			return
+		}
+		tmpl[templateName] = parsedFiles
 	}
-	tmpl["index.html"] = indexFiles
 
-	tableTemp := template.New("table")
-	tableTemp.Funcs(fm)
-	tableFiles, err := tableTemp.ParseFiles("./templates/table.html", "./templates/cell.html", "./templates/headercell.html")
-	if err != nil {
-		return nil
-	}
-	tmpl["table.html"] = tableFiles
+	parseTemplates("table/index", "./templates/views/table/table.html", "./templates/views/table/cell.html", "./templates/views/table/headercell.html", "./templates/views/table/index.html")
+	parseTemplates("table/table", "./templates/views/table/table.html", "./templates/views/table/cell.html", "./templates/views/table/headercell.html")
+	parseTemplates("list/index", "./templates/views/list/tablelist.html", "./templates/views/list/index.html")
+	parseTemplates("list/tablelist", "./templates/views/list/tablelist.html")
 
-	tmpl["cell.html"] = template.Must(template.ParseFiles("./templates/cell.html"))
-	tmpl["headercell.html"] = template.Must(template.ParseFiles("./templates/headercell.html"))
+	tmpl["table/cell"] = template.Must(template.ParseFiles("./templates/views/table/cell.html"))
+	tmpl["table/headercell"] = template.Must(template.ParseFiles("./templates/views/table/headercell.html"))
 
 	s := Scorecard{}
 	s.tmpl = tmpl
 	s.data = make(map[string]*Table)
-	s.data["Table_1"] = NewTable("Table_1")
+	s.data["default"] = NewTable("default")
 
-	s.conn = make(map[string][]*websocket.Conn)
+	s.tableConn = make(map[string][]*websocket.Conn)
 
 	return &s
 }

@@ -1,4 +1,4 @@
-{{define "table"}}
+{{define "table/table"}}
 <div id="table-{{.TableName}}">
     <style>
         .drag-selection {
@@ -32,7 +32,7 @@
             {{ range $headerIndex, $header := .Headers }}
             <th>
                 {{ with CreateHeaderData $headerIndex $root.TableName $header }}
-                {{template "headercell" .}}
+                {{template "table/headercell" .}}
                 {{end}}
             </th>
             {{ end }}
@@ -46,7 +46,7 @@
             {{ range $colIndex, $col := $row }}
             <td style="padding: 3px" onmousedown="startSelection(this)" onmousemove="continueSelection(this)">
                 {{with CreateCellData $rowIndex $colIndex $root.TableName $col -}}
-                {{template "cell" .}}
+                {{template "table/cell" .}}
                 {{end}}
             </td>
             {{ end }}

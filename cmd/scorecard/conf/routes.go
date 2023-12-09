@@ -15,10 +15,10 @@ func Routes(s *Server) error {
 		}
 		pg := v1.Group("/fs")
 		{
+			pg.GET("/sheet/", s.Spreadsheet.ListSheets())
 			pg.GET("/sheet/:tableName", s.Spreadsheet.GetSheet())
-			pg.POST("/update/:tableName", s.Spreadsheet.UpdateCell())
-			pg.POST("/update/:tableName/addRow", s.Spreadsheet.AddRow())
 			pg.GET("/live/:tableName", s.Spreadsheet.HandleLiveComm())
+			pg.GET("/live/~", s.Spreadsheet.HandleLiveComm())
 		}
 	}
 	err := s.Engine.Run(":80")

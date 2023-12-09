@@ -3,6 +3,7 @@ package spreadsheet
 import (
 	"bytes"
 	"fmt"
+	utils "influxer/scorecard/utilities"
 )
 
 func (s *Scorecard) BuildCell(tableName string, row int, col int) []byte {
@@ -14,7 +15,7 @@ func (s *Scorecard) BuildCell(tableName string, row int, col int) []byte {
 	}
 
 	var tplBuffer bytes.Buffer
-	err := s.tmpl["cell.html"].ExecuteTemplate(&tplBuffer, "cell", CellArgs{
+	err := s.tmpl["table/cell"].ExecuteTemplate(&tplBuffer, "table/cell", CellArgs{
 		RowIndex:  row,
 		ColIndex:  col,
 		TableName: tableName,
@@ -36,10 +37,11 @@ func (s *Scorecard) BuildIndex(tableName string) []byte {
 	if table == nil {
 		s.data[tableName] = NewTable(tableName)
 		table = s.data[tableName]
+		s.notifyList()
 	}
 
 	var tplBuffer bytes.Buffer
-	err := s.tmpl["index.html"].ExecuteTemplate(&tplBuffer, "index", table)
+	err := s.tmpl["table/index"].ExecuteTemplate(&tplBuffer, "table/index", table)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -47,6 +49,36 @@ func (s *Scorecard) BuildIndex(tableName string) []byte {
 
 	return tplBuffer.Bytes()
 
+}
+
+func (s *Scorecard) BuildListIndex() []byte {
+	tables := utils.MapMap(s.data, func(k string, v *Table) *Table {
+		return v
+	})
+
+	var tplBuffer bytes.Buffer
+	err := s.tmpl["list/index"].ExecuteTemplate(&tplBuffer, "list/index", tables)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	return tplBuffer.Bytes()
+}
+
+func (s *Scorecard) BuildTableList() []byte {
+	tables := utils.MapMap(s.data, func(k string, v *Table) *Table {
+		return v
+	})
+
+	var tplBuffer bytes.Buffer
+	err := s.tmpl["list/tablelist"].ExecuteTemplate(&tplBuffer, "list/tablelist", tables)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	return tplBuffer.Bytes()
 }
 func (s *Scorecard) BuildTable(tableName string) []byte {
 	table := s.data[tableName]
@@ -57,7 +89,7 @@ func (s *Scorecard) BuildTable(tableName string) []byte {
 	}
 
 	var tplBuffer bytes.Buffer
-	err := s.tmpl["table.html"].ExecuteTemplate(&tplBuffer, "table", table)
+	err := s.tmpl["table/table"].ExecuteTemplate(&tplBuffer, "table/table", table)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -70,7 +102,7 @@ func (s *Scorecard) BuildTable(tableName string) []byte {
 func (s *Scorecard) BuildHeaderCell(tableName string, row int) []byte {
 	var tplBuffer bytes.Buffer
 	s.data[tableName].changeHeaderVal(row, s.data[tableName].Headers[row].Value)
-	err := s.tmpl["headercell.html"].ExecuteTemplate(&tplBuffer, "headercell",
+	err := s.tmpl["table/headercell"].ExecuteTemplate(&tplBuffer, "table/headercell",
 		HeaderArgs{
 			row,
 			tableName,

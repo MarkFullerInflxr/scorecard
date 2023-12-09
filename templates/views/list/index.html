@@ -1,0 +1,44 @@
+{{define "list/index"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/htmx.org@1.9.9"
+            integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX"
+            crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+    <link rel="apple-touch-icon" sizes="180x180" href="/public/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/public/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/public/favicon-16x16.png">
+    <link rel="manifest" href="/public/site.webmanifest">
+    <link rel="mask-icon" href="/public/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="/public/favicon.ico">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="msapplication-config" content="/public/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+    <title>Scorecard</title>
+</head>
+<body style="margin:auto">
+<div style="display: flex; align-content: center; justify-content: center; flex-direction: column; align-items: center"
+
+>
+    <h1>Scorecard</h1>
+    <div style="display: flex;
+            gap: 5px;
+            align-content: center;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            width: 50%"
+         name="tlist"
+         id="tlist"
+         hx-ext="ws"
+         ws-connect="/fs/live/~"
+    >
+        {{ template "list/tablelist" . }}
+    </div>
+</div>
+</body>
+</html>
+{{end}}

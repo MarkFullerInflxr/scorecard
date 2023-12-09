@@ -1,11 +1,12 @@
-{{define "headercell"}}
+{{define "table/cell"}}
 <input
         style="width: 100%; height: 100%; border: none; background: inherit; outline: none;" onFocus="this.style.outline='none';" onBlur="this.style.outline='';"
         type="text"
-        id="h{{.ColIndex}}"
-        name="h{{.ColIndex}}"
+        id="c{{.RowIndex}}-{{.ColIndex}}"
+        name="c{{.RowIndex}}-{{.ColIndex}}"
         ws-send
         hx-trigger="input delay:500ms"
         value="{{.CellVal}}"
+        autocomplete="off"
 >
 {{end}}

@@ -17,6 +17,9 @@ func run() error {
 	s, routesInit := conf.NewServer()
 
 	s.Spreadsheet = spreadsheet.NewScorecard()
+	if s.Spreadsheet == nil {
+		panic("no spreadhseet")
+	}
 
 	// build roots
 	return routesInit()

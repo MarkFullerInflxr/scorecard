@@ -41,6 +41,14 @@ func Map[T, U any](input []T, fn func(T) U) []U {
 	return result
 }
 
+func MapMap[T comparable, U any, V any](input map[T]U, fn func(T, U) V) []V {
+	result := []V{}
+	for k, v := range input {
+		result = append(result, fn(k, v))
+	}
+	return result
+}
+
 func ForEach[T any](input []T, fn func(T)) {
 	for _, v := range input {
 		fn(v)
