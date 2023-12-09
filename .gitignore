@@ -1,0 +1,5 @@
+.idea/.gitignore
+.idea/modules.xml
+.idea/scorecard.iml
+.idea/vcs.xml
+go.sum

@@ -1,0 +1,13 @@
+{{define "headercell"}}
+<input
+        style="width: 100%; height: 100%; border: none; background: inherit; outline: none;" onFocus="this.style.outline='none';" onBlur="this.style.outline='';"
+        type="text"
+        id="h{{.ColIndex}}"
+        name="h{{.ColIndex}}"
+        hx-post="/fs/update/{{$.TableName}}"
+        hx-target="#h{{.ColIndex}}"
+        hx-trigger="input"
+        value="{{.CellVal}}"
+        hx-headers='{"Content-Type": "text-plain"}'
+>
+{{end}}

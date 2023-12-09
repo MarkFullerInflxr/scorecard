@@ -1,0 +1,163 @@
+{{define "table"}}
+<div>
+    <style>
+        /* Add a class for drag selection */
+        .drag-selection {
+            background-color: #b3d9ff; /* You can adjust the highlight color */
+        }
+
+        table.tg {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        table.tg th, table.tg td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        table.tg th {
+            background-color: #f2f2f2;
+        }
+
+        table.tg tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+    </style>
+    <table class="tg" id="table-{{.TableName}}" name="table-{{.TableName}}">
+        <thead>
+        <tr>
+            {{ with $root := . }}
+            {{ range $headerIndex, $header := .Headers }}
+            <th>
+                {{ with CreateHeaderData $headerIndex $root.TableName $header }}
+                {{template "headercell" .}}
+                {{end}}
+            </th>
+            {{ end }}
+            {{ end }}
+        </tr>
+        </thead>
+        <tbody>
+        {{ with $root := . }}
+        {{ range $rowIndex, $row := .Matrix }}
+        <tr>
+            {{ range $colIndex, $col := $row }}
+            <td style="padding: 3px" onmousedown="startSelection(this)" onmousemove="continueSelection(this)">
+                {{with CreateCellData $rowIndex $colIndex $root.TableName $col -}}
+                {{template "cell" .}}
+                {{end}}
+            </td>
+            {{ end }}
+        </tr>
+        {{ end }}
+        {{ end }}
+        </tbody>
+    </table>
+
+    <script>
+        var isDragging = false;
+        var startCell;
+        var endCell;
+
+        function startSelection(cell) {
+            // Start the selection when the user clicks on a cell
+            isDragging = true;
+            startCell = cell;
+            endCell = cell;
+            updateSelection();
+        }
+
+        function continueSelection(cell) {
+            // Update the selection as the user drags the mouse
+            if (isDragging) {
+                endCell = cell;
+                updateSelection();
+            }
+        }
+
+        function updateSelection() {
+            // Highlight the cells within the selection range
+            var cells = document.querySelectorAll('td');
+            cells.forEach(function (cell) {
+                if (isWithinSelection(cell)) {
+                    cell.classList.add('drag-selection');
+                } else {
+                    cell.classList.remove('drag-selection');
+                }
+            });
+        }
+
+        function isWithinSelection(cell) {
+            // Check if a cell is within the selection range
+            var startRowIndex = startCell.parentElement.rowIndex;
+            var startColIndex = startCell.cellIndex;
+            var endRowIndex = endCell.parentElement.rowIndex;
+            var endColIndex = endCell.cellIndex;
+            var currentRowIndex = cell.parentElement.rowIndex;
+            var currentColIndex = cell.cellIndex;
+
+            return (
+                currentRowIndex >= Math.min(startRowIndex, endRowIndex) &&
+                currentRowIndex <= Math.max(startRowIndex, endRowIndex) &&
+                currentColIndex >= Math.min(startColIndex, endColIndex) &&
+                currentColIndex <= Math.max(startColIndex, endColIndex)
+            );
+        }
+
+        function stopSelection() {
+            // Stop the selection when the user releases the mouse button
+            isDragging = false;
+        }
+
+        // Add event listeners for mouseup and mouseleave to stop the selection
+        document.addEventListener('mouseup', stopSelection);
+        document.addEventListener('mouseleave', stopSelection);
+    </script>
+    <script>
+        document.addEventListener('keydown', function (event) {
+            // Check if the Ctrl (or Cmd) key is pressed along with the C key
+            if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+                // Your custom logic to handle Ctrl+C
+                handleCtrlC();
+            }
+        });
+
+        function copyTextToClipboard(text) {
+            navigator.clipboard.writeText(text)
+                .then(function () {
+                    console.log('Text successfully copied to clipboard:', text);
+                })
+                .catch(function (err) {
+                    console.error('Unable to copy text to clipboard', err);
+                });
+        }
+
+        function handleCtrlC() {
+            var cells = document.querySelectorAll('.drag-selection');
+            var text = ""
+            var currentRow = undefined
+            var cellValues = Array.from(cells).map(function (cell) {
+                var inputField = cell.querySelector('input');
+                var inputValue = inputField ? inputField.value : '';
+                console.log(currentRow, inputField.id[1])
+                if (currentRow === undefined) {
+                    currentRow = inputField.id[1] //c<row>-<col>
+                }
+                if (currentRow != inputField.id[1]) {
+                    text = text.slice(0, -1)
+                    text = text + "\n"
+                    currentRow = inputField.id[1]
+                }
+
+                text = text + inputValue + "\t"
+            })
+            copyTextToClipboard(text.slice(0, -1))
+        }
+    </script>
+
+
+</div>
+{{end}}

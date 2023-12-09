@@ -1,0 +1,22 @@
+{{define "index"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/htmx.org@1.9.9" integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+    <title>Hello, World!</title>
+</head>
+<body>
+    <p>{{ .TableName }}</p>
+    {{template "table" .}}
+    <button style="width: 100%"
+            hx-swap="outerHTML"
+            hx-target="#table-{{.TableName}}"
+            hx-post="/fs/update/{{$.TableName}}/addRow"
+            name="button-{{.TableName}}"
+    >Add Row</button>
+</body>
+</html>
+{{end}}
