@@ -2,9 +2,8 @@ package utils
 
 import (
 	"encoding/json"
-	"io"
-
 	log "github.com/sirupsen/logrus"
+	"io"
 )
 
 func ToJson(obj any) string {
@@ -34,4 +33,26 @@ func FromJson[T interface{}](obj io.ReadCloser, dest *T) {
 
 func FromJsonBytes[T interface{}](bytes []byte, dest *T) error {
 	return json.Unmarshal(bytes, dest)
+}
+
+func Split(s string, delimiters ...rune) []string {
+
+	splat := []string{}
+	lastMatch := -1
+
+	for i := 0; i < len(s); i++ {
+		for j := 0; j < len(delimiters); j++ {
+			if int32(s[i]) == delimiters[j] {
+				token := s[lastMatch+1 : i]
+				splat = append(splat, token)
+				lastMatch = i
+			}
+		}
+	}
+	token := s[lastMatch+1:]
+	if len(token) != 0 {
+		splat = append(splat, token)
+	}
+
+	return splat
 }

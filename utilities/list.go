@@ -55,6 +55,17 @@ func ForEach[T any](input []T, fn func(T)) {
 	}
 }
 
+func InsertAt[T any](arr []T, v T, idx int) []T {
+	if idx > len(arr) {
+		return append(arr, v)
+	}
+	newArr := make([]T, len(arr)+1)
+	copy(newArr[:idx], arr[:idx])
+	newArr[idx] = v
+	copy(newArr[idx+1:], arr[idx:])
+	return newArr
+}
+
 func AnyNil[T any](obj T, fields []string) (error, string) {
 	objValue := reflect.ValueOf(obj)
 

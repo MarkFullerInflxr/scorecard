@@ -26,8 +26,20 @@
      hx-ext="ws"
      ws-connect="/fs/live/{{.TableName}}">
 
-    <div id="table-{{.TableName}}"
-         name="table-{{.TableName}}">None
+    <div style="display: flex; ">
+        <div id="table-{{.TableName}}"
+             name="table-{{.TableName}}">None
+        </div>
+
+        <button style="writing-mode: vertical-rl;
+                margin-top: 20px;
+                text-orientation: mixed;"
+                hx-swap="outerHTML"
+                hx-target="#table-{{.TableName}}"
+                ws-send
+                name="ac-{{.TableName}}"
+        >Add Column
+        </button>
     </div>
     <button style="width: 100%"
             hx-swap="outerHTML"

@@ -5,7 +5,6 @@ import (
 	"github.com/gorilla/websocket"
 	"strconv"
 	"strings"
-	"sync"
 	"text/template"
 )
 
@@ -32,8 +31,14 @@ func (s *Scorecard) handleEvent(meta map[string]interface{}, conn *websocket.Con
 			event := parseWhatToken(k)
 
 			if event.event == "bodyCellValue" {
-				s.data[tableName].changeCellVal(event.locators[0], event.locators[1], v.(string))
-				s.notifyCells(tableName, event.locators[0], event.locators[1], conn)
+				notify := func(row int, col int, tNot bool) {
+					if tNot {
+						s.notifyTable(tableName)
+					} else {
+						s.notifyCells(tableName, row, col, nil) //nil ->  need to notify self
+					}
+				}
+				s.data[tableName].UpdateCell(event.locators[0], event.locators[1], v.(string), notify)
 			}
 			if event.event == "headerCellValue" {
 				s.data[tableName].changeHeaderVal(event.locators[0], v.(string))
@@ -43,7 +48,10 @@ func (s *Scorecard) handleEvent(meta map[string]interface{}, conn *websocket.Con
 				s.data[tableName].addRowAt(event.locators[0])
 				s.notifyTable(tableName)
 			}
-
+			if event.event == "addColumn" {
+				s.data[tableName].addColumnAt(event.locators[0])
+				s.notifyTable(tableName)
+			}
 		}
 	}
 }
@@ -95,55 +103,6 @@ func getTableName(s string) string {
 	}
 }
 
-type Table struct {
-	mut       sync.Mutex
-	TableName string
-	Headers   []HeaderData
-	Matrix    [][]CellData
-}
-
-func NewTable(name string) *Table {
-	mat := make([][]CellData, 2)
-	mat[0] = make([]CellData, 3)
-	mat[1] = make([]CellData, 3)
-
-	for i, _ := range mat[0] {
-		mat[0][i].Value = []byte("")
-		mat[1][i].Value = []byte("")
-	}
-
-	t := Table{
-		mut:       sync.Mutex{},
-		TableName: name,
-		Headers:   []HeaderData{{}, {}, {}},
-		Matrix:    mat,
-	}
-	return &t
-}
-
-type CellData struct {
-	Value []byte
-	Type  string
-}
-
-type HeaderData struct {
-	Value string
-}
-
-type HeaderArgs struct {
-	ColIndex  int
-	TableName string
-	CellVal   any
-}
-
-type CellArgs struct {
-	RowIndex  int
-	ColIndex  int
-	TableName string
-	CellVal   any
-	CellType  string
-}
-
 func CreateCellData(rowIndex int, colIndex int, tableName string, cellVal CellData) CellArgs {
 	cd := CellArgs{rowIndex, colIndex, tableName, string(cellVal.Value), cellVal.Type}
 	return cd
@@ -185,64 +144,11 @@ func NewScorecard() *Scorecard {
 	s := Scorecard{}
 	s.tmpl = tmpl
 	s.data = make(map[string]*Table)
-	s.data["default"] = NewTable("default")
+	s.data["default_table"] = NewTable("default_table")
 
 	s.tableConn = make(map[string][]*websocket.Conn)
 
 	return &s
-}
-
-func (s *Table) changeCellVal(row int, col int, val string) {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	s.Matrix[row][col].Value = []byte(val)
-}
-
-func (s *Table) changeHeaderVal(col int, val string) {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	s.Headers[col].Value = val
-}
-
-func (s *Table) addRowBottom() {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	s.Matrix = append(s.Matrix, make([]CellData, len(s.Matrix[0])))
-}
-
-// add a row between two indices
-// if its negative count back from the end
-// it its positive just shift
-func (s *Table) addRowAt(i int) {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	if i > 0 {
-		newRow := make([]CellData, len(s.Matrix[0]))
-		s.Matrix = append(s.Matrix[:i+1], nil)
-		copy(s.Matrix[i+1:], s.Matrix[i:])
-		s.Matrix[i] = newRow
-	} else {
-		/*
-			-3|0: [],
-			-2|1: []
-			-1|2: nil
-		*/
-		width := len(s.Matrix[0]) //1
-		height := len(s.Matrix)
-		newRow := make([]CellData, width)
-
-		bottomEnd := [][]CellData{}
-		copy(bottomEnd, s.Matrix[height+i:])
-
-		s.Matrix = append(s.Matrix[:height+i+1], nil) // s[0:2] -> only the first row
-		height = len(s.Matrix)                        //3
-		copy(s.Matrix[height+i+1:], bottomEnd)        //s[1:] , s[2-1-1:]
-		s.Matrix[height+i] = newRow
-	}
 }
 
 type TableUpdateEvent struct {
@@ -275,6 +181,9 @@ func parseWhatToken(s string) TableUpdateEvent {
 
 	if strings.HasPrefix(s, "ar") { //
 		return TableUpdateEvent{event: "addRow", locators: []int{-1}}
+	}
+	if strings.HasPrefix(s, "ac") { //
+		return TableUpdateEvent{event: "addColumn", locators: []int{-1}}
 	}
 	return TableUpdateEvent{}
 }
